@@ -1,0 +1,182 @@
+<?php
+
+/**
+ * The plugin bootstrap file
+ *
+ * This file is read by WordPress to generate the plugin information in the plugin
+ * admin area. This file also includes all of the dependencies used by the plugin,
+ * registers the activation and deactivation functions, and defines a function
+ * that starts the plugin.
+ *
+ * @link
+ * @since             1.0.0
+ * @package           Vc_Events_Manager
+ *
+ * @wordpress-plugin
+ * Plugin Name:       VC Events Manager
+ * Plugin URI:
+ * Description:       This plugin displays upcoming events using th Events Calender Pro Plugin through Visual Composer.
+ * Version:           1.0.0
+ * Author:            Donnovan Huey
+ * Author URI:
+ * License:           GPL-2.0+
+ * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
+ * Text Domain:       vc-events-manager
+ * Domain Path:       /languages
+ */
+
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
+	die;
+}
+
+/**
+ * Currently plugin version.
+ * Start at version 1.0.0 and use SemVer - https://semver.org
+ * Rename this for your plugin and update it as you release new versions.
+ */
+define( 'VC_EVENTS_MANAGER_VERSION', '1.0.0' );
+
+/**
+ * The code that runs during plugin activation.
+ * This action is documented in includes/class-vc-events-manager-activator.php
+ */
+function activate_vc_events_manager() {
+	require_once plugin_dir_path( __FILE__ ) . 'includes/class-vc-events-manager-activator.php';
+	Vc_Events_Manager_Activator::activate();
+}
+
+/**
+ * The code that runs during plugin deactivation.
+ * This action is documented in includes/class-vc-events-manager-deactivator.php
+ */
+function deactivate_vc_events_manager() {
+	require_once plugin_dir_path( __FILE__ ) . 'includes/class-vc-events-manager-deactivator.php';
+	Vc_Events_Manager_Deactivator::deactivate();
+}
+
+register_activation_hook( __FILE__, 'activate_vc_events_manager' );
+register_deactivation_hook( __FILE__, 'deactivate_vc_events_manager' );
+
+/**
+ * The core plugin class that is used to define internationalization,
+ * admin-specific hooks, and public-facing site hooks.
+ */
+require plugin_dir_path( __FILE__ ) . 'includes/class-vc-events-manager.php';
+
+/**
+ * Begins execution of the plugin.
+ *
+ * Since everything within the plugin is registered via hooks,
+ * then kicking off the plugin from this point in the file does
+ * not affect the page life cycle.
+ *
+ * @since    1.0.0
+ */
+function run_vc_events_manager() {
+
+	$plugin = new Vc_Events_Manager();
+	$plugin->run();
+
+}
+run_vc_events_manager();
+
+
+add_action('after_setup_theme', function(){
+
+	class vc_events_manager_script extends WP_Widget{
+		public function __construct(){
+			parent::__construct('vc_events_manager_script','VC Events Manager', array(
+				'description'			=> 'Insert your VC Events'
+			));
+		}
+		public function widget($jkrp1, $jkvrp2){ ?>
+            <div class="vc-events-manager-wrap">
+
+				<?php
+				$vemArgs = new WP_Query(array(
+					'post_type'			=> 'tribe_events',
+					'posts_per_page'	=> !empty($jkvrp2['post_number']) ? $jkvrp2['post_number'] : -1
+				));
+				while($vemArgs->have_posts()) : $vemArgs->the_post();
+					?>
+
+                    <div class="vc-events-column" style="width:<?php echo $jkvrp2['col_number']; ?>%">
+                        <div class="vc-img-wrap" style="width:<?php echo $jkvrp2['img_width']; ?>%">
+							<?php the_post_thumbnail(); ?>
+                        </div>
+                        <div class="vc-cnt-wrap" style="width:<?php echo $jkvrp2['cnt_width']; ?>%">
+                            <h2><?php the_title(); ?></h2>
+                            <p>
+                                <?php
+                                    $strtimes       = tribe_get_start_time();
+                                    $strtime        =  date('Hi', strtotime($strtimes));
+                                    $endtimes       = tribe_get_end_time() . ' ';
+                                    $endtime        =  date('Hi', strtotime($endtimes));
+
+                                    $vc_event_loc   = tribe_get_venue() . ' ';
+
+                                    $datetimestar   = get_post_meta(get_the_ID(), '_EventStartDate', true);
+                                    $datetimeend    = get_post_meta(get_the_ID(), '_EventEndDate', true);
+
+                                    echo date('F d, Y', strtotime($datetimestar));
+                                    //echo 'End : '. date('F d, Y', strtotime($datetimeend));
+                                    $eventdte       = date('Ymd', strtotime($datetimestar));
+                                    $eventdteend    = date('Ymd', strtotime($datetimeend));
+
+                                    $eventtitle 	=   get_the_title();
+                                    $eventcnt 	    =   get_the_content();
+								?>
+                            </p>
+
+                            <ul class="vc-cnt-button-wrap">
+                                <li>
+                                    <a href="<?php the_permalink(); ?>">
+										<?php echo !empty($jkvrp2['learn_more']) ? $jkvrp2['learn_more'] : 'Learn More'; ?>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="http://www.google.com/calendar/event?action=TEMPLATE&text=<?php echo $eventtitle; ?>&dates=<?php echo $eventdte; ?>T<?php echo $strtime; ?>00200%2F<?php echo $eventdteend; ?>T<?php echo $endtime; ?>00200&details=<?php echo $eventcnt; ?>&location=<?php echo !empty($vc_event_loc) ? $vc_event_loc : 'United States'; ?>" target="__blank">
+										<?php echo !empty($jkvrp2['cl_btn']) ? $jkvrp2['cl_btn'] : 'Add To Calender'; ?>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+				<?php endwhile; wp_reset_postdata(); ?>
+            </div>
+		<?php }
+		public function form($jkvrp2){
+			$post_number 		= 	$jkvrp2['post_number'];
+			$col_number 		= 	$jkvrp2['col_number'];
+			$img_width 		    = 	$jkvrp2['img_width'];
+			$cnt_width 		    = 	$jkvrp2['cnt_width'];
+
+			?>
+            <p>Events Number
+                <input type="text" class="widefat" name="<?php echo $this->get_field_name('post_number'); ?>" value="<?php echo $post_number; ?>" />
+            </p>
+            <p>Column Width
+                <input type="text" class="widefat" name="<?php echo $this->get_field_name('col_number'); ?>" value="<?php echo $col_number; ?>" />
+				<span><i>Column width : %</i></span>
+            </p>
+            <p>Read More
+                <input type="text" class="widefat" name="<?php echo $this->get_field_name('learn_more'); ?>" value="<?php echo $learn_more; ?>" />
+            </p>
+            <p>Add To Calender
+                <input type="text" class="widefat" name="<?php echo $this->get_field_name('cl_btn'); ?>" value="<?php echo $cl_btn; ?>" />
+            </p>
+            <p>Image Width
+                <input type="number" class="widefat" name="<?php echo $this->get_field_name('img_width'); ?>" value="<?php echo $img_width; ?>" />
+            </p>
+            <p>Content Width
+                <input type="number" class="widefat" name="<?php echo $this->get_field_name('cnt_width'); ?>" value="<?php echo $cnt_width; ?>" />
+            </p>
+
+		<?php }
+	}
+	add_action('widgets_init', function(){
+		register_widget('vc_events_manager_script');
+	});
+});
